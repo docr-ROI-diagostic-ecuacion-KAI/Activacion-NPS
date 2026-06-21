@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 
-const logoUrl = 'https://docroi.marketing/wp-content/uploads/2026/05/Logo_Negro_DoC_ROI.jpg';
+const logoUrl = 'https://docroi.marketing/wp-content/uploads/2024/12/Logo_Doctor_ROI.jpg';
+const docRoiHomeUrl = 'https://el-botiquin-del-doc-roi.vercel.app/';
 const workflowUrl = `${import.meta.env.BASE_URL}doc_roi_pildora_nps_n8n_workflow.json`;
 const tabs = ['Bienvenida', 'Encuesta', 'Publica', 'n8n', 'Creatividades', 'Activos', 'Personalización', 'Analytics', 'Siguiente paso'];
 const tabIds = tabs.map((tab) => tab.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replaceAll(' ', '-'));
@@ -35,7 +36,14 @@ function Workbench({ title, text, filename }) {
 
 function App() {
   const [active, setActive] = useState('bienvenida');
-  return <div className="app-shell"><header className="topbar"><div className="brand"><img src={logoUrl} alt="Doc ROI" /><div><strong>Connection XX</strong><span>Automatiza tu NPS con IA</span></div></div><a className="ghost-link" href={workflowUrl} download>Descargar workflow n8n</a></header><main className="layout"><nav className="tabs">{tabs.map((tab, i) => <button key={tab} className={active === tabIds[i] ? 'active' : ''} onClick={() => setActive(tabIds[i])}>{tab}</button>)}</nav><section className="content"><Page id={active} /></section></main></div>;
+  function goToSection(sectionId) {
+    setActive(sectionId);
+    window.requestAnimationFrame(() => document.getElementById('doc-roi-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
+  const navStyle = { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' };
+  const linkStyle = { width: 'auto', minHeight: 40, color: '#f6f7f9', background: 'transparent', borderColor: 'rgba(246,247,249,.22)', whiteSpace: 'nowrap' };
+  const ctaStyle = { width: 'auto', minHeight: 40, color: '#0b0f19', background: '#fff', borderColor: 'rgba(246,247,249,.85)', whiteSpace: 'nowrap' };
+  return <div className="app-shell"><header className="topbar"><a className="brand" href={docRoiHomeUrl} aria-label="Ir al Botiquín DOC ROI"><img src={logoUrl} alt="DOC ROI" /><div><strong>Connection XX</strong><span>Automatiza tu NPS con IA</span></div></a><nav style={navStyle} aria-label="Navegación principal DOC ROI"><button type="button" style={linkStyle} onClick={() => goToSection('bienvenida')}>Método</button><button type="button" style={linkStyle} onClick={() => goToSection('n8n')}>Recursos</button><button type="button" style={ctaStyle} onClick={() => goToSection('encuesta')}>Abrir herramienta</button></nav></header><main className="layout"><nav className="tabs">{tabs.map((tab, i) => <button key={tab} className={active === tabIds[i] ? 'active' : ''} onClick={() => setActive(tabIds[i])}>{tab}</button>)}</nav><section className="content" id="doc-roi-content"><Page id={active} /></section></main></div>;
 }
 
 function Page({ id }) {
