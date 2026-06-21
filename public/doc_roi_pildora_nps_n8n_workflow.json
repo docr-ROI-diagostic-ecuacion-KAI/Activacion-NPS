@@ -1,0 +1,129 @@
+{
+  "name": "Doc ROI - Pildora NPS IA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "doc-roi-nps",
+        "responseMode": "lastNode"
+      },
+      "id": "webhook-captura-encuesta",
+      "name": "Webhook captura encuesta",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const score = Number($json.score);\\nlet nps_segment = 'detractor';\\nif (score >= 9) nps_segment = 'promotor';\\nelse if (score >= 7) nps_segment = 'pasivo';\\nreturn [{ json: { ...$json, score, nps_segment, lookup_key: `${nps_segment}_${$json.root_cause || 'general'}` } }];"
+      },
+      "id": "codigo-clasifica-nps",
+      "name": "Codigo clasifica NPS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 280]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "GOOGLE_SHEET_ID_RESPUESTAS",
+        "sheetName": "respuestas_nps"
+      },
+      "id": "sheets-guarda-respuesta",
+      "name": "Google Sheets guarda respuesta",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [760, 180]
+    },
+    {
+      "parameters": {
+        "operation": "lookup",
+        "documentId": "GOOGLE_SHEET_ID_ACTIVOS",
+        "sheetName": "biblioteca_activos",
+        "lookupColumn": "lookup_key",
+        "lookupValue": "={{$json.lookup_key}}"
+      },
+      "id": "sheets-busca-creatividad",
+      "name": "Google Sheets busca creatividad",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [760, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "const firstName = $json.name || 'cliente';\\nconst subject = $json.subject || `Gracias por tu respuesta, ${firstName}`;\\nconst intro = $json.body_intro || 'Hemos recibido tu valoracion y queremos actuar sobre ella.';\\nconst cta = $json.action_text || 'Ver siguiente paso';\\nreturn [{ json: { ...$json, email_subject: subject, email_body: `${intro}\\n\\n${cta}: ${$json.landing_url || ''}` } }];"
+      },
+      "id": "codigo-compone-email",
+      "name": "Codigo compone email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1020, 280]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "conditions": [{ "leftValue": "={{$json.nps_segment}}", "rightValue": "promotor", "operator": { "type": "string", "operation": "equals" } }] } },
+            { "conditions": { "conditions": [{ "leftValue": "={{$json.nps_segment}}", "rightValue": "pasivo", "operator": { "type": "string", "operation": "equals" } }] } },
+            { "conditions": { "conditions": [{ "leftValue": "={{$json.nps_segment}}", "rightValue": "detractor", "operator": { "type": "string", "operation": "equals" } }] } }
+          ]
+        }
+      },
+      "id": "switch-segmento",
+      "name": "Switch separa promotor pasivo detractor",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1280, 280]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$json.email}}",
+        "subject": "={{$json.email_subject}}",
+        "message": "={{$json.email_body}}"
+      },
+      "id": "gmail-envia-email",
+      "name": "Gmail envia email personalizado",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [1540, 280]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "GOOGLE_SHEET_ID_RESPUESTAS",
+        "sheetName": "envios_nps"
+      },
+      "id": "sheets-registra-envio",
+      "name": "Google Sheets registra envio",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1800, 280]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":true,\"message\":\"Respuesta NPS recibida\"}"
+      },
+      "id": "respond-confirma-recepcion",
+      "name": "Respond confirma recepcion",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2060, 280]
+    }
+  ],
+  "connections": {
+    "Webhook captura encuesta": { "main": [[{ "node": "Codigo clasifica NPS", "type": "main", "index": 0 }]] },
+    "Codigo clasifica NPS": { "main": [[{ "node": "Google Sheets guarda respuesta", "type": "main", "index": 0 }, { "node": "Google Sheets busca creatividad", "type": "main", "index": 0 }]] },
+    "Google Sheets busca creatividad": { "main": [[{ "node": "Codigo compone email", "type": "main", "index": 0 }]] },
+    "Codigo compone email": { "main": [[{ "node": "Switch separa promotor pasivo detractor", "type": "main", "index": 0 }]] },
+    "Switch separa promotor pasivo detractor": { "main": [[{ "node": "Gmail envia email personalizado", "type": "main", "index": 0 }], [{ "node": "Gmail envia email personalizado", "type": "main", "index": 0 }], [{ "node": "Gmail envia email personalizado", "type": "main", "index": 0 }]] },
+    "Gmail envia email personalizado": { "main": [[{ "node": "Google Sheets registra envio", "type": "main", "index": 0 }]] },
+    "Google Sheets registra envio": { "main": [[{ "node": "Respond confirma recepcion", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "versionId": "doc-roi-nps-training-base"
+}
